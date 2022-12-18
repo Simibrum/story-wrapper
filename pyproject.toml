@@ -1,0 +1,24 @@
+# See https://packaging.python.org/en/latest/tutorials/packaging-projects/ for more information.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "story-wrapper"
+version = "0.0.1"
+authors = [
+  { name="Ben Hoyle", email="ben.hoyle@simibrum.com" },
+]
+description = "A spaCy wrapper to do more with stories."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Simibrum/story-wrapper"
+"Bug Tracker" = "https://github.com/Simibrum/story-wrapper"
