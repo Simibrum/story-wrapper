@@ -1,7 +1,7 @@
 # See https://packaging.python.org/en/latest/tutorials/packaging-projects/ for more information.
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "spacy", "setuptools>=42", "wheel", "twine"]
 build-backend = "hatchling.build"
 
 [project]

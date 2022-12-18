@@ -130,3 +130,6 @@ dmypy.json
 
 # PyCharm idea folder
 .idea/
+/src/story_wrapper/indexes/
+*.gz
+*.bz2
