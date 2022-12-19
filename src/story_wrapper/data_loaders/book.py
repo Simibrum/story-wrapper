@@ -2,6 +2,7 @@
 import logging
 import re
 import os
+from src.story_wrapper.data_loaders.gutenberg import get_book
 
 
 def zero_pad(numbers):
@@ -16,8 +17,8 @@ def zero_pad(numbers):
 
 
 class Book:
-    def __init__(self, filename, nochapters, stats):
-        self.filename = filename
+    def __init__(self, book_id, nochapters, stats):
+        self.book_id = book_id
         self.nochapters = nochapters
         self.end_location = None
         self.end_line = None
@@ -25,27 +26,24 @@ class Book:
         self.lines = self.get_lines()
         self.headings = self.get_headings()
         # Alias for historical reasons. FIXME
-        self.headingLocations = self.headings
+        self.heading_locations = self.headings
         self.ignore_toc()
-        logging.info('Heading locations: %s' % self.headingLocations)
-        headingsPlain = [self.lines[loc] for loc in self.headingLocations]
-        logging.info('Headings: %s' % headingsPlain)
+        logging.info('Heading locations: %s' % self.heading_locations)
+        headings_plain = [self.lines[loc] for loc in self.heading_locations]
+        logging.info('Headings: %s' % headings_plain)
         self.chapters = self.get_text_between_headings()
         # logging.info('Chapters: %s' % self.chapters)
-        self.numChapters = len(self.chapters)
+        self.num_chapters = len(self.chapters)
+        self.paragraphs = self.get_paragraphs()
 
         if stats:
             self.get_stats()
-        else:
-            self.write_chapters()
 
     def get_contents(self):
         """
         Reads the book into memory.
         """
-        with open(self.filename, errors='ignore') as f:
-            contents = f.read()
-        return contents
+        return get_book(self.book_id)
 
     def get_lines(self):
         """
@@ -127,7 +125,7 @@ class Book:
         Filters headings out that are too close together,
         since they probably belong to a table of contents.
         """
-        pairs = zip(self.headingLocations, self.headingLocations[1:])
+        pairs = zip(self.heading_locations, self.heading_locations[1:])
         toBeDeleted = []
         for pair in pairs:
             delta = pair[1] - pair[0]
@@ -138,8 +136,8 @@ class Book:
                     toBeDeleted.append(pair[1])
         logging.debug('TOC locations to be deleted: %s' % toBeDeleted)
         for badLoc in toBeDeleted:
-            index = self.headingLocations.index(badLoc)
-            del self.headingLocations[index]
+            index = self.heading_locations.index(badLoc)
+            del self.heading_locations[index]
 
     def get_end_location(self):
         """
@@ -168,12 +166,30 @@ class Book:
 
     def get_text_between_headings(self):
         chapters = []
-        lastHeading = len(self.headingLocations) - 1
-        for i, headingLocation in enumerate(self.headingLocations):
+        lastHeading = len(self.heading_locations) - 1
+        for i, headingLocation in enumerate(self.heading_locations):
             if i != lastHeading:
-                nextHeadingLocation = self.headingLocations[i+1]
+                nextHeadingLocation = self.heading_locations[i + 1]
                 chapters.append(self.lines[headingLocation+1:nextHeadingLocation])
         return chapters
+
+    def get_paragraphs(self):
+        """
+        Returns a list of paragraphs.
+        """
+        paragraphs = []
+        for chapter in self.chapters:
+            line_group = []
+            for line in chapter:
+                if line.strip() != '':
+                    line_group.append(line)
+                elif line_group:
+                    paragraphs.append(" ".join(line_group).strip())
+                    line_group = []
+            # Add the last line group.
+            if line_group and line != '':
+                paragraphs.append(" ".join(line_group).strip())
+        return paragraphs
 
     def get_stats(self):
         """
@@ -181,10 +197,10 @@ class Book:
         """
         # TODO: Check to see if there's a log file. If not, make one.
         # Write headings to file.
-        numChapters = self.numChapters
+        numChapters = self.num_chapters
         averageChapterLength = sum([len(chapter) for chapter in self.chapters])/numChapters
-        headings = ['Filename', 'Average chapter length', 'Number of chapters']
-        stats = ['"' + self.filename + '"', averageChapterLength, numChapters]
+        headings = ['ID', 'Average chapter length', 'Number of chapters']
+        stats = ['"' + self.book_id + '"', averageChapterLength, numChapters]
         stats = [str(val) for val in stats]
         headings = ','.join(headings) + '\n'
         statsLog = ','.join(stats) + '\n'
@@ -200,34 +216,3 @@ class Book:
         with open('log.txt', 'a') as f:
             f.write(statsLog)
             f.close()
-
-    def write_chapters(self):
-        chapterNums = zero_pad(range(1, len(self.chapters) + 1))
-        logging.debug('Writing chapter headings: %s' % chapterNums)
-        basename = os.path.basename(self.filename)
-        noExt = os.path.splitext(basename)[0]
-
-        if self.nochapters:
-            # Join together all the chapters and lines.
-            text = ""
-            for chapter in self.chapters:
-                # Stitch together the lines.
-                chapter = '\n'.join(chapter)
-                # Stitch together the chapters.
-                text += chapter + '\n'
-            ext = '-extracted.txt'
-            path = noExt + ext
-            with open(path, 'w') as f:
-                f.write(text)
-        else:
-            logging.info('Filename: %s' % noExt)
-            outDir = noExt + '-chapters'
-            if not os.path.exists(outDir):
-                os.makedirs(outDir)
-            ext = '.txt'
-            for num, chapter in zip(chapterNums, self.chapters):
-                path = outDir + '/' + num + ext
-                logging.debug(chapter)
-                chapter = '\n'.join(chapter)
-                with open(path, 'w') as f:
-                    f.write(chapter)
