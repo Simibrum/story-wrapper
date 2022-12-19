@@ -1,7 +1,7 @@
 """Code to test gutenberg book processing."""
 from unittest import TestCase
 from unittest.mock import MagicMock
-from src.story_wrapper.data_loaders.book import Book
+from story_wrapper.data_loaders.book import Book
 
 # Mock the get_book function
 with open("test_data_book.txt", errors='ignore') as f:
@@ -11,7 +11,7 @@ Book.get_contents = MagicMock(return_value=contents)
 
 class TestBook(TestCase):
     def test_get_text(self):
-        book = Book(1, False, False)
+        book = Book(1)
         assert book.contents == contents
         # print(book.lines[20:30])
         # print(book.contents.split('\n\n'))

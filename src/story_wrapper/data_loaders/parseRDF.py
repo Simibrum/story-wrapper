@@ -28,13 +28,16 @@ Based on https://bitbucket.org/c-w/gutenberg/
  'type': 'Text'}
 
 """
-
+import logging
 import gzip
 import os
 import re
 import tarfile
-import urllib
+import requests
 import xml.etree.cElementTree as ElementTree
+
+# Get path of current folder
+CURRENT_FOLDER = os.path.dirname(os.path.abspath(__file__))
 
 try:
 	import cPickle as pickle
@@ -42,8 +45,8 @@ except ImportError:
 	import pickle
 
 # TODO set path for indexes as data path
-PICKLEFILE = 'md.pickle.gz'  # The Python dict produced by this module
-RDFFILES = 'rdf-files.tar.bz2'  # The catalog downloaded from Gutenberg
+PICKLEFILE = os.path.join(CURRENT_FOLDER, 'indexes', 'md.pickle.gz')  # The Python dict produced by this module
+RDFFILES = os.path.join(CURRENT_FOLDER, 'indexes', 'rdf-files.tar.bz2')  # The catalog downloaded from Gutenberg
 RDFURL = r'http://www.gutenberg.org/cache/epub/feeds/rdf-files.tar.bz2'
 META_FIELDS = (
 	'id', 'author', 'title', 'downloads', 'formats', 'type', 'LCC', 'subjects',
@@ -88,8 +91,10 @@ def readmetadata():
 	http://www.gutenberg.org/wiki/Gutenberg:Help_on_Bibliographic_Record_Page
 	"""
 	if os.path.exists(PICKLEFILE):
+		logging.info('Reading metadata from %s', PICKLEFILE)
 		metadata = pickle.load(gzip.open(PICKLEFILE, 'rb'))
 	else:
+		logging.info('Creating metadata from RDF index')
 		metadata = {}
 		for xml in getrdfdata():
 			ebook = xml.find(r'{%(pg)s}ebook' % NS)
@@ -110,7 +115,11 @@ def getrdfdata():
 
 	"""
 	if not os.path.exists(RDFFILES):
-		_, _ = urllib.request.urlretrieve(RDFURL, RDFFILES)
+		logging.info('Downloading RDF files from %s', RDFURL)
+		r = requests.get(RDFURL)
+		with open(RDFFILES, 'wb') as f:
+			f.write(r.content)
+	logging.info('Extracting XML metadata from %s', RDFFILES)
 	with tarfile.open(RDFFILES) as archive:
 		for tarinfo in archive:
 			yield ElementTree.parse(archive.extractfile(tarinfo))
@@ -232,5 +241,3 @@ def safeunicode(arg, *args, **kwargs):
 	"""Coerce argument to unicode, if it's not already."""
 	return arg if isinstance(arg, str) else arg.decode(*args, **kwargs)
 
-
-__all__ = ['readmetadata']

@@ -2,7 +2,7 @@
 import logging
 import re
 import os
-from src.story_wrapper.data_loaders.gutenberg import get_book
+from story_wrapper.data_loaders.gutenberg import get_book
 
 
 def zero_pad(numbers):
@@ -17,7 +17,7 @@ def zero_pad(numbers):
 
 
 class Book:
-    def __init__(self, book_id, stats):
+    def __init__(self, book_id):
         self.book_id = book_id
         self.end_location = None
         self.end_line = None
