@@ -17,9 +17,8 @@ def zero_pad(numbers):
 
 
 class Book:
-    def __init__(self, book_id, nochapters, stats):
+    def __init__(self, book_id, stats):
         self.book_id = book_id
-        self.nochapters = nochapters
         self.end_location = None
         self.end_line = None
         self.contents = self.get_contents()
@@ -35,9 +34,6 @@ class Book:
         # logging.info('Chapters: %s' % self.chapters)
         self.num_chapters = len(self.chapters)
         self.paragraphs = self.get_paragraphs()
-
-        if stats:
-            self.get_stats()
 
     def get_contents(self):
         """
@@ -165,22 +161,23 @@ class Book:
         return endLocation
 
     def get_text_between_headings(self):
-        chapters = []
+        chapters = {}
         lastHeading = len(self.heading_locations) - 1
         for i, headingLocation in enumerate(self.heading_locations):
             if i != lastHeading:
-                nextHeadingLocation = self.heading_locations[i + 1]
-                chapters.append(self.lines[headingLocation+1:nextHeadingLocation])
+                chapters[i] = {}
+                chapters[i]['heading'] = self.lines[headingLocation]
+                chapters[i]['text'] = self.lines[headingLocation + 1:self.heading_locations[i+1]]
         return chapters
 
     def get_paragraphs(self):
         """
         Returns a list of paragraphs.
         """
-        paragraphs = []
-        for chapter in self.chapters:
+        for chapter_idx in self.chapters:
+            paragraphs = []
             line_group = []
-            for line in chapter:
+            for line in self.chapters[chapter_idx]['text']:
                 if line.strip() != '':
                     line_group.append(line)
                 elif line_group:
@@ -189,30 +186,6 @@ class Book:
             # Add the last line group.
             if line_group and line != '':
                 paragraphs.append(" ".join(line_group).strip())
-        return paragraphs
+            self.chapters[chapter_idx]['paragraphs'] = paragraphs
+        return [p for chapter_idx in self.chapters for p in self.chapters[chapter_idx]['paragraphs']]
 
-    def get_stats(self):
-        """
-        Returns statistics about the chapters, like their length.
-        """
-        # TODO: Check to see if there's a log file. If not, make one.
-        # Write headings to file.
-        numChapters = self.num_chapters
-        averageChapterLength = sum([len(chapter) for chapter in self.chapters])/numChapters
-        headings = ['ID', 'Average chapter length', 'Number of chapters']
-        stats = ['"' + self.book_id + '"', averageChapterLength, numChapters]
-        stats = [str(val) for val in stats]
-        headings = ','.join(headings) + '\n'
-        statsLog = ','.join(stats) + '\n'
-        logging.info('Log headings: %s' % headings)
-        logging.info('Log stats: %s' % statsLog)
-
-        if not os.path.exists('log.txt'):
-            logging.info('Log file does not exist. Creating it.')
-            with open('log.txt', 'w') as f:
-                f.write(headings)
-                f.close()
-
-        with open('log.txt', 'a') as f:
-            f.write(statsLog)
-            f.close()

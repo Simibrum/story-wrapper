@@ -22,6 +22,8 @@ class TestBook(TestCase):
             'CHAPTER VIII', 'CHAPTER IX', 'CHAPTER X', 'CHAPTER XI', 'CHAPTER XII',
             "End of Project Gutenberg's The Irish at the Front, by Michael MacDonagh"
         ]
+        print(len(book.paragraphs))
+        print(book.paragraphs)
         assert len(book.paragraphs) == 305
 
 
