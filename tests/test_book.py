@@ -1,18 +1,17 @@
 """Code to test gutenberg book processing."""
 from unittest import TestCase
-from unittest.mock import MagicMock
+from unittest.mock import patch
 from story_wrapper.data_loaders.book import Book
 
 # Mock the get_book function
 with open("test_data_book.txt", errors='ignore') as f:
-    contents = f.read()
-Book.get_contents = MagicMock(return_value=contents)
+    TEST_BOOK_TEXT = f.read()
 
 
 class TestBook(TestCase):
     def test_get_text(self):
-        book = Book(1)
-        assert book.contents == contents
+        book = Book(1, TEST_BOOK_TEXT)
+        assert book.contents == TEST_BOOK_TEXT
         # print(book.lines[20:30])
         # print(book.contents.split('\n\n'))
         assert book.end_location
@@ -22,8 +21,6 @@ class TestBook(TestCase):
             'CHAPTER VIII', 'CHAPTER IX', 'CHAPTER X', 'CHAPTER XI', 'CHAPTER XII',
             "End of Project Gutenberg's The Irish at the Front, by Michael MacDonagh"
         ]
-        print(len(book.paragraphs))
-        print(book.paragraphs)
         assert len(book.paragraphs) == 305
 
 

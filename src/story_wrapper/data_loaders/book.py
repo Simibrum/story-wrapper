@@ -1,8 +1,6 @@
 # Based on https://github.com/JonathanReeve/chapterize/blob/master/chapterize/chapterize.py
 import logging
 import re
-import os
-from story_wrapper.data_loaders.gutenberg import get_book
 
 
 def zero_pad(numbers):
@@ -17,11 +15,11 @@ def zero_pad(numbers):
 
 
 class Book:
-    def __init__(self, book_id):
+    def __init__(self, book_id: int, text: str):
         self.book_id = book_id
         self.end_location = None
         self.end_line = None
-        self.contents = self.get_contents()
+        self.contents = text
         self.lines = self.get_lines()
         self.headings = self.get_headings()
         # Alias for historical reasons. FIXME
@@ -34,12 +32,6 @@ class Book:
         # logging.info('Chapters: %s' % self.chapters)
         self.num_chapters = len(self.chapters)
         self.paragraphs = self.get_paragraphs()
-
-    def get_contents(self):
-        """
-        Reads the book into memory.
-        """
-        return get_book(self.book_id)
 
     def get_lines(self):
         """
@@ -107,7 +99,6 @@ class Book:
                 "Detected fewer than three chapters. This probably means there's "
                 "something wrong with chapter detection for this book."
             )
-            exit()
 
         self.end_location = self.get_end_location()
 

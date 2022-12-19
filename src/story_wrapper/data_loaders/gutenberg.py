@@ -11,7 +11,9 @@ import pickle
 import gzip
 import os
 import zipfile
+import random
 from story_wrapper.data_loaders.parseRDF import readmetadata
+from story_wrapper.data_loaders.book import Book
 
 # Get path of current folder
 CURRENT_FOLDER = os.path.dirname(os.path.abspath(__file__))
@@ -109,7 +111,7 @@ class Gutenberg:
             except KeyError:
                 logging.debug(f"Book {bookid} not in fiction index.")
 
-    def get_book(self, book_id: int):
+    def get_book_text(self, book_id: int) -> str:
         """Get the text of a book from a synced database."""
         book = self.fiction_md.get(book_id, None)
         if book:
@@ -120,3 +122,17 @@ class Gutenberg:
         else:
             raise FileNotFoundError
         return text
+
+    def get_book_object(self, book_id: int) -> Book:
+        """Get the book object from the index."""
+        text = self.get_book_text(book_id)
+        return Book(book_id, text)
+
+    def get_ids(self) -> List[int]:
+        """Get a list of book ids."""
+        return list(self.fiction_md.keys())
+
+    def get_random_book(self) -> Book:
+        """Get a random book."""
+        book_id = random.choice(self.get_ids())
+        return self.get_book_object(book_id)
