@@ -1,7 +1,7 @@
 # See https://packaging.python.org/en/latest/tutorials/packaging-projects/ for more information.
 
 [build-system]
-requires = ["hatchling", "spacy", "setuptools>=42", "wheel", "twine"]
+requires = ["hatchling", "setuptools>=42", "wheel", "twine"]
 build-backend = "hatchling.build"
 
 [project]
@@ -17,6 +17,16 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+]
+dependencies = [
+    "spacy[cuda-autodetect]",
+    "spacy-llm"
+]
+dev-dependencies = [
+    "pytest",
+    "black",
+    "ipykernel",
+    "flake8",
 ]
 
 [project.urls]

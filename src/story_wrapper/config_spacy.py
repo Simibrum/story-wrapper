@@ -25,7 +25,14 @@ def load_model():
     except OSError as e:
         logging.warning(e)
         logging.warning("Spacy Model Load Error")
-        nlp = spacy.load('en_core_web_sm')
+        # Attempt to download the model
+        try:
+            download_model(SPACY_MODEL)
+            nlp = spacy.load(SPACY_MODEL)
+        except Exception as e_download:
+            logging.error(f"Could not download the model due to: {e_download}")
+            logging.info("Falling back to 'en_core_web_sm'")
+            nlp = spacy.load('en_core_web_sm')
     # Add custom components to the pipeline
     nlp = configure_pipeline(nlp)
     return nlp
@@ -39,10 +46,10 @@ def configure_pipeline(nlp):
     return nlp
 
 
-def download_model():
+def download_model(model_name: str):
     """Download the spacy model."""
-    logging.info(f"Downloading Spacy Model {SPACY_MODEL}")
-    spacy.cli.download(SPACY_MODEL)
+    logging.info(f"Downloading Spacy Model {model_name}")
+    spacy.cli.download(model_name)
 
 
 # See here - https://stackoverflow.com/questions/46249052/best-way-to-initialize-variable-in-a-module

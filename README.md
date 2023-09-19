@@ -5,12 +5,17 @@ Story Wrapper is a tool for working with longer-form stories.
 It uses spaCy under the hood to parse the text and identify the characters, 
 locations and events.
 
-# Story-Wrapper
-
-Your introduction to the project here.
-
 ## Table of Contents
 
+- [Usage](#usage)
+  - [Initializing a Story](#initializing-a-story)
+  - [Working with Stories](#working-with-stories)
+    - [Accessing Paragraphs](#accessing-paragraphs)
+    - [Checking for Paragraphs](#checking-for-paragraphs)
+  - [Text Processing and Analysis](#text-processing-and-analysis)
+    - [Processing the Story](#processing-the-story)
+    - [Unique Entities and Characters](#unique-entities-and-characters)
+    - [Counting Characters](#counting-characters)
 - [Project Structure](#project-structure)
 - [Setting Up a Local Development Environment](#setting-up-a-local-development-environment)
   - [Creating a Python 3.10 Virtual Environment](#creating-a-python-310-virtual-environment)
@@ -19,6 +24,84 @@ Your introduction to the project here.
 - [Running Tests](#running-tests)
   - [Installing pytest](#installing-pytest)
   - [Running Tests with pytest](#running-tests-with-pytest)
+
+---
+
+## Usage
+
+### Initializing a Story
+
+The `Story` class can be initialized with a single string or a list of strings. Each string typically represents a paragraph in the story. Optionally, you can specify `process_on_load=True` to automatically process the text using spaCy upon initialization. If not specified, this defaults to `True`.
+
+```python
+# Initialize with a single string
+story_single = Story("Once upon a time...")
+print(len(story_single))  # Output: 1
+
+# Initialize with multiple strings
+story_multi = Story(["Once upon a time...", "There was a fox."])
+print(len(story_multi))  # Output: 2
+```
+
+### Working with Stories
+
+#### Accessing Paragraphs
+
+Individual paragraphs (text blocks) can be accessed using indexing. The class also supports iteration.
+
+```python
+# Access a paragraph by index
+print(story_multi[0])  # Output: "Once upon a time..."
+
+# Iterate through the paragraphs
+for para in story_multi:
+    print(para)
+```
+
+#### Checking for Paragraphs
+
+You can check if a specific paragraph is present in the story using Python's `in` operator.
+
+```python
+# Check if a paragraph exists
+if "Once upon a time..." in story_multi:
+    print("Found it!")
+```
+
+### Text Processing and Analysis
+
+#### Processing the Story
+
+The story text can be processed using spaCy to generate Doc objects, which will allow for more advanced analyses like named entity recognition, part-of-speech tagging, etc. If `process_on_load=True` is not set during initialization, you can manually process the text by calling the `process` method.
+
+```python
+docs = story_multi.process()
+```
+
+#### Unique Entities and Characters
+
+To get a set of unique entities or characters in the story, you can call the `unique_entities` and `characters` methods, respectively.
+
+```python
+unique_entities, entity_spans = story_multi.unique_entities()
+print(unique_entities)
+
+characters = story_multi.characters()
+print(characters)
+```
+
+#### Counting Characters
+
+To get the frequency count of each character in the story, you can use the `count_characters` method, which returns a Counter object.
+
+```python
+character_count = story_multi.count_characters()
+print(character_count)
+```
+
+---
+
+Feel free to adapt this section to fit in your existing README file. It should provide a clear guide to users on how to utilize the `Story` class effectively.
 
 ## Project Structure
 
@@ -103,3 +186,18 @@ python -m pytest tests/
 ```
 
 Using `pytest` as a Python module ensures that the Python environment is consistent with your virtual environment, especially if you have faced import issues.
+
+
+### Configuring a Jupyter Notebook Kernel
+
+To use the virtual environment in a Jupyter notebook, you'll need to install the `ipykernel` package:
+
+```bash
+pip install ipykernel
+```
+
+Then, you can add the virtual environment as a kernel:
+
+```bash
+python -m ipykernel install --user --name=story-wrapper
+```

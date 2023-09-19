@@ -11,3 +11,8 @@ class TestStory(TestCase):
         assert book.paragraphs
         story = Story(book.paragraphs)
         assert story.docs
+        characters = story.characters()
+        assert characters == ['MONS', 'John French', 'De Freyne', 'Douglas Haig', 'Horace Smith-Dorrien']
+        assert len(story) == 5
+        assert story.count_characters() == {
+            'MONS': 1, 'John French': 1, 'De Freyne': 1, 'Douglas Haig': 1, 'Horace Smith-Dorrien': 1}
