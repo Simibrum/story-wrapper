@@ -1,10 +1,16 @@
 """Code to test gutenberg book processing."""
+import os
 from unittest import TestCase
 from unittest.mock import patch
 from story_wrapper.data_loaders.book import Book
 
+# Set the path of the tests directory
+TEST_DIR = os.path.dirname(os.path.abspath(__file__))
+# Set the path of the test data
+TEST_DATA_PATH = os.path.join(TEST_DIR, 'test_data_book.txt')
+
 # Mock the get_book function
-with open("test_data_book.txt", errors='ignore') as f:
+with open(TEST_DATA_PATH, errors='ignore') as f:
     TEST_BOOK_TEXT = f.read()
 
 
