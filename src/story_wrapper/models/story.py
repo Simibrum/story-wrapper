@@ -73,15 +73,18 @@ class Story:
         # Initialise list of character occurrences
         self.occurrences = []
         # Initialise set of characters
-        self.characters = []
+        self.characters = {}
         # Initialise set of potential characters
-        self.potential_characters = []
+        self.potential_characters = {}
+        # Initialise list of docs
+        self.docs = []
+        # Initialise list of names to process
+        self.names_to_process = []
         # Process the story
         if process_on_load:
             self.docs = self.process()
             self.process_occurrences()
-        else:
-            self.docs = []
+            self.names_to_process = list(self.get_occurrences_by_text().keys())
 
     def __len__(self) -> int:
         """Return the length of the story."""
@@ -155,6 +158,13 @@ class Story:
             occurrences_by_text[o.text.lower()].append(o)
         return occurrences_by_text
 
+    def get_single_token_candidates(self) -> list:
+        """Return a list of strings that have multiple tokens."""
+        return [
+            k for k, v in self.get_occurrences_by_text().items()
+            if len(v[0].span) == 1
+        ]
+
     def get_multiple_token_candidates(self) -> list:
         """Return a list of strings that have multiple tokens."""
         return [
@@ -175,8 +185,8 @@ class Story:
             potential_surnames.add(last_name.lower_)
         return potential_first_names, potential_surnames
 
-    def get_potential_characters(self) -> List[Character]:
-        """Return a list of potential characters."""
+    def get_potential_characters(self) -> dict[Character]:
+        """Return a dict of potential characters."""
         occurrences_by_text = self.get_occurrences_by_text()
         for candidate in self.get_multiple_token_candidates():
             new_character = Character()
@@ -188,24 +198,66 @@ class Story:
                 new_character.surname = splits[-1]
                 if len(splits) > 2:
                     new_character.middle_names = splits[1:-1]
-            self.potential_characters.append(new_character)
+            self.potential_characters[new_character.id] = new_character
+            # Remove from names to process
+            self.names_to_process.remove(candidate)
         return self.potential_characters
 
-    def merge_by_nicknames(self) -> List[Character]:
+    def merge_by_nicknames(self) -> dict:
         """Merge potential characters by nicknames."""
-        characters = self.get_potential_characters()
-        relevant_combinations = filter_relevant_character_combinations(characters)
+        if not self.potential_characters:
+            self.get_potential_characters()
+        characters = self.potential_characters.copy()
+        characters_as_list = list(characters.values())
+        relevant_combinations = filter_relevant_character_combinations(characters_as_list)
         for candidate1, candidate2 in relevant_combinations:
             if candidate2.firstname in nn.nicknames_of(candidate1.firstname):
                 merge_characters_by_alias(candidate1, candidate2)
-                characters.remove(candidate2)
+                del characters[candidate2.id]
             if candidate1.firstname in nn.nicknames_of(candidate2.firstname):
                 merge_characters_by_alias(candidate2, candidate1)
-                characters.remove(candidate1)
+                del characters[candidate1.id]
         self.potential_characters = characters
         return self.potential_characters
 
-    def process_characters(self) -> List[Character]:
+    def process_characters(self) -> dict:
         """Process the characters in the story."""
         self.merge_by_nicknames()
         return self.potential_characters
+
+    def merge_occurrences(self, potential_matches: dict, backward_matches: dict):
+        """Merge occurrences based on matches."""
+        for char_id, single_names in potential_matches.items():
+            for single_name in single_names:
+                if len(potential_matches[char_id]) == 1 and len(backward_matches[single_name]) == 1:
+                    character = self.potential_characters[char_id]
+                    single_occurrences = self.get_occurrences_by_text()[single_name]
+                    character.add_occurrences(single_occurrences)
+                    self.names_to_process.remove(single_name)
+
+    def match_single_firstname_characters(self):
+        """Match occurrences to characters based on unique firstname matches."""
+        potential_matches = defaultdict(list)
+        backward_matches = defaultdict(list)
+
+        for character in self.potential_characters.values():
+            for single_name in self.get_single_token_candidates():
+                if single_name == character.firstname or single_name in nn.nicknames_of(character.firstname):
+                    potential_matches[character.id].append(single_name)
+                    backward_matches[single_name].append(character.id)
+
+        self.merge_occurrences(potential_matches, backward_matches)
+
+    def match_single_surname_characters(self):
+        """Match occurrences to characters based on unique surname matches."""
+        potential_matches = defaultdict(list)
+        backward_matches = defaultdict(list)
+
+        for character in self.potential_characters.values():
+            for single_name in self.get_single_token_candidates():
+                if single_name == character.surnname:
+                    potential_matches[character.id].append(single_name)
+                    backward_matches[single_name].append(character.id)
+
+        self.merge_occurrences(potential_matches, backward_matches)
+        # TODO add tests for this and above
