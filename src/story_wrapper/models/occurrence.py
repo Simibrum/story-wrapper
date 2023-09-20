@@ -1,3 +1,5 @@
+"""Occurrence model for the story wrapper."""
+import re
 from spacy.tokens import Span
 
 
@@ -44,10 +46,19 @@ class Occurrence:
     @property
     def text(self):
         """Get the text of the occurrence."""
+        span_to_use = self.span
         if self.span[0].pos_ == 'DET':
-            return self.span[1:].text
-        else:
-            return self.span.text
+            span_to_use = self.span[1:]
+        # Strip out trailing possessive 's
+        text = span_to_use.text
+        if text.endswith("'s"):
+            text = text[:-2]
+        # Check for bundles of punctuation
+        punctuation_splits = re.split(r'[^a-zA-Z0-9. ]{2,}', text)
+        if len(punctuation_splits) > 1:
+            # TODO - we might want to look for the longest if the punctuation bundle is not at the end
+            text = punctuation_splits[0]
+        return text
 
     def as_dict(self) -> dict:
         """Return as a dictionary for output."""

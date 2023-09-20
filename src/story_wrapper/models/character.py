@@ -15,6 +15,10 @@ class Character:
         self.occurrences = list()
         # Placeholder for canonical name of character
         self.name = None
+        self.firstname = None
+        self.surname = None
+        self.middle_names = []
+        self.aliases = []
         # Placeholder for relationships
         self.relationships = dict()
 
@@ -87,4 +91,3 @@ class Character:
             relations.append(links)
         # Update with revised list
         self.relationships[second_character_id] = relations
-
