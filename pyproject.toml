@@ -20,7 +20,8 @@ classifiers = [
 ]
 dependencies = [
     "spacy[cuda-autodetect]",
-    "spacy-llm"
+    "spacy-llm",
+    "tiktoken"
 ]
 dev-dependencies = [
     "pytest",
