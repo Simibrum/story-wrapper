@@ -1,6 +1,6 @@
 """Occurrence model for the story wrapper."""
-import re
 from spacy.tokens import Span
+from story_wrapper.utils import clean_out_punctuation
 
 
 class Occurrence:
@@ -54,11 +54,10 @@ class Occurrence:
         if text.endswith("'s"):
             text = text[:-2]
         # Check for bundles of punctuation
-        punctuation_splits = re.split(r'[^a-zA-Z0-9. ]{2,}', text)
-        if len(punctuation_splits) > 1:
-            # TODO - we might want to look for the longest if the punctuation bundle is not at the end
-            text = punctuation_splits[0]
+        text = clean_out_punctuation(text)
         return text
+
+
 
     def as_dict(self) -> dict:
         """Return as a dictionary for output."""

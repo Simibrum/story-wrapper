@@ -8,6 +8,7 @@ from nicknames import NickNamer
 from story_wrapper.config_spacy import nlp_service
 from story_wrapper.models.occurrence import Occurrence
 from story_wrapper.models.character import Character
+from story_wrapper.utils import clean_out_punctuation
 
 nn = NickNamer()
 
@@ -51,11 +52,11 @@ def filter_relevant_character_combinations(characters: list[Character]) -> list:
         span1 = candidate1.occurrences[0].span
         span2 = candidate2.occurrences[0].span
 
-        tokens1 = {token.lower_ for token in span1 if token.pos_ not in excluded_pos}
-        tokens2 = {token.lower_ for token in span2 if token.pos_ not in excluded_pos}
+        tokens1 = {clean_out_punctuation(token.lower_) for token in span1 if token.pos_ not in excluded_pos}
+        tokens2 = {clean_out_punctuation(token.lower_) for token in span2 if token.pos_ not in excluded_pos}
 
         # Check if there are any common tokens
-        if tokens1.intersection(tokens2):
+        if tokens1.intersection(tokens2) or tokens2.intersection(tokens1):
             relevant_combinations.append((candidate1, candidate2))
 
     return relevant_combinations
@@ -220,9 +221,64 @@ class Story:
         self.potential_characters = characters
         return self.potential_characters
 
+    def merge_by_plural(self) -> dict:
+        """Merge potential characters by checking for plurals."""
+        if not self.potential_characters:
+            self.get_potential_characters()
+        characters = self.potential_characters.copy()
+        characters_as_list = list(characters.values())
+        relevant_combinations = filter_relevant_character_combinations(characters_as_list)
+        for candidate1, candidate2 in relevant_combinations:
+            # Check if we have a first name match
+            if candidate1.firstname == candidate2.firstname:
+                # Check if one of the surname tokens is a plural
+                # We'll need to go back to the original spacy span to check this
+                span1 = candidate1.occurrences[0].span
+                span2 = candidate2.occurrences[0].span
+                if span1[-1].tag_ == "NNPS":
+                    # Check whether the last tokens match without an "s" on span1[-1]
+                    if candidate1.surname[:-1] == candidate2.surname:
+                        # If so, merge and delete candidate2
+                        candidate2.add_occurrences(candidate1.occurrences)
+                        del characters[candidate1.id]
+                elif span2[-1].tag_ == "NNPS":
+                    # Check whether the last tokens match without an "s" on span1[-1]
+                    if candidate2.surname[:-1] == candidate1.surname:
+                        candidate1.add_occurrences(candidate2.occurrences)
+                        del characters[candidate2.id]
+        self.potential_characters = characters
+        return self.potential_characters
+
+    def merge_by_initial(self) -> dict:
+        """Merge potential characters by checking for initials."""
+        if not self.potential_characters:
+            self.get_potential_characters()
+        characters = self.potential_characters.copy()
+        characters_as_list = list(characters.values())
+        relevant_combinations = filter_relevant_character_combinations(characters_as_list)
+        matches = []
+        for candidate1, candidate2 in relevant_combinations:
+            # Check if we have a surname name match
+            if candidate1.surname == candidate2.surname and candidate1.firstname[0] == candidate2.firstname[0]:
+                if "." in candidate1.firstname and len(candidate1.firstname) < 3:
+                    matches.append((candidate2, candidate1))
+                elif "." in candidate2.firstname and len(candidate2.firstname) < 3:
+                    matches.append((candidate1, candidate2))
+        # If only a single match (i.e. no ambiguity) - merge
+        if len(matches) == 1:
+            main, to_merge_in = matches[0]
+            merge_characters_by_alias(main, to_merge_in)
+            del characters[to_merge_in.id]
+        self.potential_characters = characters
+        return self.potential_characters
+
     def process_characters(self) -> dict:
         """Process the characters in the story."""
+        self.merge_by_plural()
+        self.merge_by_initial()
         self.merge_by_nicknames()
+        self.match_single_surname_characters()
+        self.match_single_firstname_characters()
         return self.potential_characters
 
     def merge_occurrences(self, potential_matches: dict, backward_matches: dict):
@@ -233,7 +289,8 @@ class Story:
                     character = self.potential_characters[char_id]
                     single_occurrences = self.get_occurrences_by_text()[single_name]
                     character.add_occurrences(single_occurrences)
-                    self.names_to_process.remove(single_name)
+                    if single_name in self.names_to_process:
+                        self.names_to_process.remove(single_name)
 
     def match_single_firstname_characters(self):
         """Match occurrences to characters based on unique firstname matches."""
@@ -242,7 +299,8 @@ class Story:
 
         for character in self.potential_characters.values():
             for single_name in self.get_single_token_candidates():
-                if single_name == character.firstname or single_name in nn.nicknames_of(character.firstname):
+                # Maybe we remove the nickname here? or single_name in nn.nicknames_of(character.firstname)
+                if single_name == character.firstname:
                     potential_matches[character.id].append(single_name)
                     backward_matches[single_name].append(character.id)
 
@@ -255,9 +313,11 @@ class Story:
 
         for character in self.potential_characters.values():
             for single_name in self.get_single_token_candidates():
-                if single_name == character.surnname:
+                if single_name == character.surname:
                     potential_matches[character.id].append(single_name)
                     backward_matches[single_name].append(character.id)
 
         self.merge_occurrences(potential_matches, backward_matches)
         # TODO add tests for this and above
+        # TODO we might want to save the forward and backward matches for later
+        # These could be used for disambiguation

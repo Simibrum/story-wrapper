@@ -25,7 +25,12 @@ class Character:
     def __repr__(self) -> str:
         return (
             f"<Character - ID: {self.id}; "
-            f"name: {self.name}>"
+            f"name: '{self.name}'; "
+            f"no. of occurrences: {len(self.occurrences)}; "
+            f"first name: '{self.firstname}'; "
+            f"surname: '{self.surname}'; "
+            f"middle names: {self.middle_names}; "
+            f"aliases: {self.aliases}>"
         )
 
     def __len__(self) -> int:
