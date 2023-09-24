@@ -22,7 +22,8 @@ dependencies = [
     "spacy[cuda-autodetect]",
     "spacy-llm",
     "tiktoken",
-    "nicknames"
+    "nicknames",
+    "matplotlib"
 ]
 dev-dependencies = [
     "pytest",

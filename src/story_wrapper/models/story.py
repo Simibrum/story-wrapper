@@ -222,12 +222,14 @@ class Story:
         characters_as_list = list(characters.values())
         relevant_combinations = filter_relevant_character_combinations(characters_as_list)
         for candidate1, candidate2 in relevant_combinations:
-            if candidate2.firstname in nn.nicknames_of(candidate1.firstname):
-                merge_characters_by_alias(candidate1, candidate2)
-                del characters[candidate2.id]
-            if candidate1.firstname in nn.nicknames_of(candidate2.firstname):
-                merge_characters_by_alias(candidate2, candidate1)
-                del characters[candidate1.id]
+            # Check first that there are first names to compare
+            if candidate1.firstname and candidate2.firstname:
+                if candidate2.firstname in nn.nicknames_of(candidate1.firstname):
+                    merge_characters_by_alias(candidate1, candidate2)
+                    del characters[candidate2.id]
+                if candidate1.firstname in nn.nicknames_of(candidate2.firstname):
+                    merge_characters_by_alias(candidate2, candidate1)
+                    del characters[candidate1.id]
         self.potential_characters = characters
         return self.potential_characters
 
@@ -240,7 +242,7 @@ class Story:
         relevant_combinations = filter_relevant_character_combinations(characters_as_list)
         for candidate1, candidate2 in relevant_combinations:
             # Check if we have a first name match
-            if candidate1.firstname == candidate2.firstname:
+            if candidate1.firstname and candidate2.firstname and candidate1.firstname == candidate2.firstname:
                 # Check if one of the surname tokens is a plural
                 # We'll need to go back to the original spacy span to check this
                 span1 = candidate1.occurrences[0].span
@@ -269,11 +271,12 @@ class Story:
         matches = []
         for candidate1, candidate2 in relevant_combinations:
             # Check if we have a surname name match
-            if candidate1.surname == candidate2.surname and candidate1.firstname[0] == candidate2.firstname[0]:
-                if "." in candidate1.firstname and len(candidate1.firstname) < 3:
-                    matches.append((candidate2, candidate1))
-                elif "." in candidate2.firstname and len(candidate2.firstname) < 3:
-                    matches.append((candidate1, candidate2))
+            if candidate1.firstname and candidate2.firstname and candidate1.surname == candidate2.surname:
+                if candidate1.firstname[0] == candidate2.firstname[0]:
+                    if "." in candidate1.firstname and len(candidate1.firstname) < 3:
+                        matches.append((candidate2, candidate1))
+                    elif "." in candidate2.firstname and len(candidate2.firstname) < 3:
+                        matches.append((candidate1, candidate2))
         # If only a single match (i.e. no ambiguity) - merge
         if len(matches) == 1:
             main, to_merge_in = matches[0]
