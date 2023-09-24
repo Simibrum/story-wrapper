@@ -5,6 +5,8 @@ from itertools import combinations
 from collections import Counter, defaultdict
 from spacy.tokens import Doc, Span
 from nicknames import NickNamer
+
+from story_wrapper.init_logger import logger
 from story_wrapper.config_spacy import nlp_service
 from story_wrapper.models.occurrence import Occurrence
 from story_wrapper.models.character import Character
@@ -143,6 +145,14 @@ class Story:
         """Return a counter of characters in the story."""
         return Counter(self.people_list())
 
+    def get_main_characters(self, n: int = None) -> List[str]:
+        """Return the top n characters in the story."""
+        char_list = self.potential_characters.values()
+        if not n:
+            n = len(char_list)
+        sorted_chars = sorted(char_list, key=lambda x: len(x), reverse=True)
+        return [c for c in sorted_chars[:n]]
+
     def process_occurrences(self):
         """Process the occurrences of characters in the story."""
         # Process the story
@@ -277,8 +287,9 @@ class Story:
         self.merge_by_plural()
         self.merge_by_initial()
         self.merge_by_nicknames()
-        self.match_single_surname_characters()
-        self.match_single_firstname_characters()
+        self.match_single_name_characters("surname")
+        self.match_single_name_characters("firstname")
+        self.add_characters_from_single_strings()
         return self.potential_characters
 
     def merge_occurrences(self, potential_matches: dict, backward_matches: dict):
@@ -292,32 +303,68 @@ class Story:
                     if single_name in self.names_to_process:
                         self.names_to_process.remove(single_name)
 
-    def match_single_firstname_characters(self):
-        """Match occurrences to characters based on unique firstname matches."""
+    def match_single_name_characters(
+            self,
+            name_attribute: str
+    ) -> None:
+        """
+        Match occurrences to characters based on unique name matches.
+
+        Args:
+            name_attribute (str): The attribute of the Character object to consider for matching.
+            Can be 'firstname' or 'surname'.
+
+        """
+        if name_attribute not in ['firstname', 'surname']:
+            raise ValueError(f"Invalid name_attribute: {name_attribute}")
+
         potential_matches = defaultdict(list)
         backward_matches = defaultdict(list)
 
         for character in self.potential_characters.values():
             for single_name in self.get_single_token_candidates():
-                # Maybe we remove the nickname here? or single_name in nn.nicknames_of(character.firstname)
-                if single_name == character.firstname:
+                if single_name == getattr(character, name_attribute):
                     potential_matches[character.id].append(single_name)
                     backward_matches[single_name].append(character.id)
 
         self.merge_occurrences(potential_matches, backward_matches)
 
-    def match_single_surname_characters(self):
-        """Match occurrences to characters based on unique surname matches."""
-        potential_matches = defaultdict(list)
-        backward_matches = defaultdict(list)
-
-        for character in self.potential_characters.values():
-            for single_name in self.get_single_token_candidates():
-                if single_name == character.surname:
-                    potential_matches[character.id].append(single_name)
-                    backward_matches[single_name].append(character.id)
-
-        self.merge_occurrences(potential_matches, backward_matches)
         # TODO add tests for this and above
         # TODO we might want to save the forward and backward matches for later
         # These could be used for disambiguation
+
+    def add_characters_from_single_strings(self):
+        """Add characters from single strings after initial population."""
+        processed_names = []
+        characters = self.potential_characters
+        # Iterate over unmatched string names
+        for name in self.names_to_process:
+            character_match = defaultdict(list)
+            # Try to match with existing characters
+            for char in characters.values():
+                existing_names = {char.surname, char.firstname} | {alias for alias in char.aliases}
+                # Add also potential nicknames
+                existing_names.update(nn.nicknames_of(char.firstname))
+                # Also check for plurals
+                # Check that existing surname is not a plural then add the plural form
+                if not char.surname.endswith("s"):
+                    if not char.occurrences[0].span[-1].tag_ == "NNPS":
+                        # Add with an s to compare
+                        existing_names.add(char.surname + "s")
+                logger.debug(f"Comparing: '{name}' to {existing_names}")
+                if name in existing_names:
+                    character_match[name].append(char.id)
+            logger.debug(f"Character matches: {character_match[name]}")
+            if len(character_match[name]) == 0:
+                logger.debug(f"{name} has no matches with existing potential characters")
+                # If no matches, create a new character
+                new_character = Character()
+                new_character.name = name
+                new_character.add_occurrences(self.get_occurrences_by_text()[name])
+                self.potential_characters[new_character.id] = new_character
+                processed_names.append(name)
+            else:
+                logger.debug(f"{name} has matches: {[characters[c] for c in character_match[name]]}")
+        # Mark processed names as processed
+        for name in processed_names:
+            self.names_to_process.remove(name)
