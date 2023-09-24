@@ -342,16 +342,20 @@ class Story:
             character_match = defaultdict(list)
             # Try to match with existing characters
             for char in characters.values():
-                existing_names = {char.surname, char.firstname} | {alias for alias in char.aliases}
-                # Add also potential nicknames
-                existing_names.update(nn.nicknames_of(char.firstname))
-                # Also check for plurals
-                # Check that existing surname is not a plural then add the plural form
-                if not char.surname.endswith("s"):
-                    if not char.occurrences[0].span[-1].tag_ == "NNPS":
-                        # Add with an s to compare
-                        existing_names.add(char.surname + "s")
-                logger.debug(f"Comparing: '{name}' to {existing_names}")
+                existing_names = set()
+                if char.firstname:
+                    existing_names.add(char.firstname)
+                    # Add nicknames
+                    existing_names.update(nn.nicknames_of(char.firstname))
+                if char.surname:
+                    existing_names.add(char.surname)
+                    # Also check for plurals
+                    # Check that existing surname is not a plural then add the plural form
+                    if not char.surname.endswith("s"):
+                        if not char.occurrences[0].span[-1].tag_ == "NNPS":
+                            # Add with an s to compare
+                            existing_names.add(char.surname + "s")
+                    logger.debug(f"Comparing: '{name}' to {existing_names}")
                 if name in existing_names:
                     character_match[name].append(char.id)
             logger.debug(f"Character matches: {character_match[name]}")
